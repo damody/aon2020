@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "HeroAction.h"
 #include "Unit.generated.h"
 
 
@@ -35,7 +36,13 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	//依序做完裡面的動作
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
+	TArray<FHeroAction> ActionQueue;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
+	FHeroAction CurrentAction;
 	
 	UPROPERTY(EditAnywhere, meta = (DisplayName = "攻擊順序"), Category = "aon")
 	EShowMethod AttackShow;

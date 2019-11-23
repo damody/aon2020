@@ -268,6 +268,8 @@ enum class EKeyBehavior : uint8
 UENUM(BlueprintType)
 enum class EHeroActionStatus : uint8
 {
+	//站著休息
+	Default,
 	//A點地板 移動中遇到敵人停下來攻擊
 	MovingAttackToPosition,
 	//移動到指定位置
