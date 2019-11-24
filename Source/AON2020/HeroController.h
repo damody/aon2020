@@ -21,11 +21,14 @@ protected:
 	// Begin PlayerController interface
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void SetupInputComponent() override;
+	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 	// End PlayerController interface
 
 	uint32 bMoveToMouseCursor : 1;
 	uint32 bMouseRButton : 1;
 	uint32 bMouseLButton : 1;
+	uint32 bLeftShiftDown : 1;
+	uint32 bRightShiftDown : 1;
 	UPrimitiveComponent* ClickedPrimitive;
 
 public:
@@ -35,15 +38,18 @@ public:
 	TMap<FKey, EKeyBehavior> KeyMapping;
 
 	// 本地玩家的英雄
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	AHero* LocalHero;
 
 	// 當前滑鼠坐標
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D CurrentMouseXY;
 
 	FVector2D GetMouseScreenPosition();
 
-	UFUNCTION(Server, WithValidation, Reliable, BlueprintCallable, Category = "MOBA")
+	void OnMouseLDown();
+	void OnMouseRDown();
+
+	UFUNCTION(Server, WithValidation, Reliable)
 	void ServerCharacterMove(class AUnit* hero, const FVector& pos);
 };

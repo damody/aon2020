@@ -31,11 +31,11 @@ struct FHeroAction
 
 	// for MoveToPosition, MovingAttackToPosition, SpellToPosition, SpellToDirection, MoveToThrowEqu
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector		TargetVec1;
+	FVector_NetQuantize		TargetVec1;
 
 	// for SpellToPosition, SpellToDirection
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector		TargetVec2;
+	FVector_NetQuantize		TargetVec2;
 
 	// for SpellToPosition, SpellToDirection, MoveToThrowEqu
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

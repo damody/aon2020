@@ -36,7 +36,27 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(Server, WithValidation, Reliable)
+	void PushAction(FHeroAction action);
+
+	UFUNCTION(Server, WithValidation, Reliable)
+	void OverideAction(FHeroAction action);
 	
+	void DoAction(const FHeroAction& CurrentAction);
+
+	//停止所有動作
+	void DoNothing();
+
+	//做移動到指定位置
+	void DoAction_MoveToPosition(const FHeroAction& CurrentAction);
+
+	//確定當前動作做完了沒
+	bool CheckCurrentActionFinish();
+
+	//推出做完的動作
+	void PopAction();
+
 	//依序做完裡面的動作
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
 	TArray<FHeroAction> ActionQueue;
@@ -55,4 +75,17 @@ public:
 
 	UPROPERTY(EditAnywhere, meta = (DisplayName = "暈眩動作"), Category = "aon")
 	UAnimMontage* Stun;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
+	EHeroBodyStatus BodyStatus;
+
+	//是否活著
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current", Replicated)
+	bool IsAlive = true;
+
+	//最後一次移動的位置
+	FVector LastMoveTarget = FVector::ZeroVector;
+
+	uint16 Seq = 0;
+
 };
