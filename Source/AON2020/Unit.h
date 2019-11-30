@@ -16,6 +16,8 @@ enum class EShowMethod : uint8
 	SHOW_END UMETA(Hidden, DisplayName = ""),
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChangeDelegate, float, HP, float, MaxHP);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMPChangeDelegate, float, MP, float, MaxMP);
 
 UCLASS()
 class AON2020_API AUnit : public ACharacter
@@ -31,6 +33,7 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -56,6 +59,30 @@ public:
 
 	//推出做完的動作
 	void PopAction();
+
+	UFUNCTION()
+	void OnHPChange(float HP, float MaxHP);
+	UFUNCTION()
+	void OnMPChange(float MP, float MaxMP);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "血量變動事件OnHPChange"), Category = "CF1")
+	void BP_OnHPChange(float HP, float MaxHP);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "魔力變動事件OnMPChange"), Category = "CF1")
+	void BP_OnMPChange(float MP, float MaxMP);
+	
+
+	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "血量"), ReplicatedUsing = OnRep_HP)
+	int16 HP = 1000;
+
+	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "最大血量"), ReplicatedUsing = OnRep_MaxHP)
+	int16 MaxHP = 1000;
+
+	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "魔力"), ReplicatedUsing = OnRep_MP)
+	int16 MP = 1000;
+	
+	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "最大魔力"), ReplicatedUsing = OnRep_MaxMP)
+	int16 MaxMP = 1000;
 
 	//依序做完裡面的動作
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
@@ -87,5 +114,21 @@ public:
 	FVector LastMoveTarget = FVector::ZeroVector;
 
 	uint16 Seq = 0;
+
+	FOnHPChangeDelegate OnHPChangeDelegate;
+	FOnMPChangeDelegate OnMPChangeDelegate;
+
+protected:
+	UFUNCTION()
+	void OnRep_HP();
+
+	UFUNCTION()
+	void OnRep_MP();
+
+	UFUNCTION()
+	void OnRep_MaxHP();
+	
+	UFUNCTION()
+	void OnRep_MaxMP();
 
 };

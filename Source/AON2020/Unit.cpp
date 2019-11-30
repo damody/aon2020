@@ -5,19 +5,20 @@
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 
+
 // Sets default values
 AUnit::AUnit()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 // Called when the game starts or when spawned
 void AUnit::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	OnHPChange(HP, MaxHP);
+	OnMPChange(MP, MaxMP);
 }
 
 // Called every frame
@@ -211,6 +212,44 @@ void AUnit::PushAction_Implementation(FHeroAction action)
 bool AUnit::PushAction_Validate(FHeroAction action)
 {
 	return true;
+}
+
+void AUnit::OnHPChange(float HP, float MaxHP)
+{
+	BP_OnHPChange(HP, MaxHP);
+}
+
+void AUnit::OnMPChange(float MP, float MaxMP)
+{
+	BP_OnMPChange(MP, MaxMP);
+}
+
+void AUnit::OnRep_HP()
+{
+	HP = FMath::Clamp(HP, (int16)0, MaxHP);
+	OnHPChangeDelegate.Broadcast(HP, MaxHP);
+	OnHPChange(HP, MaxHP);
+}
+
+void AUnit::OnRep_MaxHP()
+{
+	HP = FMath::Clamp(HP, (int16)0, MaxHP);
+	OnHPChangeDelegate.Broadcast(HP, MaxHP);
+	OnHPChange(HP, MaxHP);
+}
+
+void AUnit::OnRep_MP()
+{
+	MP = FMath::Clamp(MP, (int16)0, MaxMP);
+	OnMPChangeDelegate.Broadcast(MP, MaxMP);
+	OnMPChange(MP, MaxMP);
+}
+
+void AUnit::OnRep_MaxMP()
+{
+	MP = FMath::Clamp(MP, (int16)0, MaxMP);
+	OnMPChangeDelegate.Broadcast(MP, MaxMP);
+	OnMPChange(MP, MaxMP);
 }
 
 void AUnit::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
