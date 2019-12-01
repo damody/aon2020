@@ -52,4 +52,8 @@ public:
 
 	UFUNCTION(Server, WithValidation, Reliable)
 	void ServerCharacterMove(class AUnit* hero, const FVector& pos);
+
+	UFUNCTION(Server, WithValidation, Reliable, BlueprintCallable, Category = "MOBA")
+	void ServerAttackCompute(AUnit* attacker, AUnit* victim, EDamageType dtype,
+		float damage, bool AttackLanded);
 };

@@ -49,52 +49,127 @@ void AHeroController::OnMouseRDown()
 		bool res;
 		FVector WorldOrigin;
 		FVector WorldDirection;
-		FCollisionObjectQueryParams CollisionQuery;
-		CollisionQuery.AddObjectTypesToQuery(ECC_WorldStatic);
-		if (UGameplayStatics::DeprojectScreenToWorld(this, CurrentMouseXY, WorldOrigin, WorldDirection) == true)
+		// 點人專用
 		{
-			res = GetWorld()->LineTraceMultiByObjectType(Hits, WorldOrigin, WorldOrigin + WorldDirection * HitResultTraceDistance,
-				CollisionQuery);
+			FCollisionObjectQueryParams CollisionQuery;
+			CollisionQuery.AddObjectTypesToQuery(ECC_Pawn);
+			if (UGameplayStatics::DeprojectScreenToWorld(this, CurrentMouseXY, WorldOrigin, WorldDirection) == true)
+			{
+				res = GetWorld()->LineTraceMultiByObjectType(Hits, WorldOrigin, WorldOrigin + WorldDirection * HitResultTraceDistance,
+					CollisionQuery);
+			}
+			FVector HitPoint = FVector::ZeroVector;
+			AUnit* TargetUnit = nullptr;
+			if (Hits.Num() > 0)
+			{
+				for (FHitResult Hit : Hits)
+				{
+					// 有點到東西
+					if (Hit.Actor.IsValid())
+					{
+						TargetUnit = Cast<AUnit>(Hit.Actor);
+						if (TargetUnit)
+						{
+							GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Click Hero %s"), *TargetUnit->GetClass()->GetName()));
+						}
+						else
+						{
+							UE_LOG(LogAON2020, Warning, TEXT("Click Actor %s"), *Hit.Actor->GetClass()->GetName());
+						}
+					}
+
+				}
+			}
+			ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
+			if (LocalPlayer && TargetUnit)
+			{
+				AUnit* unit = Cast<AUnit>(this->GetPawn());
+				if (unit && unit != TargetUnit)
+				{
+					FHeroAction action;
+					action.ActionStatus = EHeroActionStatus::AttackActor;
+					action.TargetActor = TargetUnit;
+					unit->OverideAction(action);
+					return;
+				}
+			}
+		}
+		// 點地版專用
+		{
+			FCollisionObjectQueryParams CollisionQuery;
+			CollisionQuery.AddObjectTypesToQuery(ECC_WorldStatic);
+			if (UGameplayStatics::DeprojectScreenToWorld(this, CurrentMouseXY, WorldOrigin, WorldDirection) == true)
+			{
+				res = GetWorld()->LineTraceMultiByObjectType(Hits, WorldOrigin, WorldOrigin + WorldDirection * HitResultTraceDistance,
+					CollisionQuery);
+			}
+			// 只 trace WorldStatic 的地板
+			FVector HitPoint = FVector::ZeroVector;
+			if (Hits.Num() > 0)
+			{
+				for (FHitResult Hit : Hits)
+				{
+					// 有點到東西
+					if (Hit.Actor.IsValid())
+					{
+						// 點到地板
+						if (Hit.Actor->GetFName().GetPlainNameString() == "Floor")
+						{
+							HitPoint = Hit.ImpactPoint;
+						}
+						// 點到地板
+						if (Hit.Actor.IsValid())
+						{
+							FString ResStr;
+							Hit.Actor->GetClass()->GetName(ResStr);
+							if (ResStr == "Landscape")
+							{
+								HitPoint = Hit.ImpactPoint;
+							}
+						}
+						AUnit* unit = Cast<AUnit>(Hit.Actor);
+						if (unit)
+						{
+							UE_LOG(LogAON2020, Warning, TEXT("Click Actor %s"), *unit->GetClass()->GetName());
+						}
+						else
+						{
+							UE_LOG(LogAON2020, Warning, TEXT("Click Actor %s"), *Hit.Actor->GetClass()->GetName());
+						}
+					}
+
+				}
+			}
+			ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
+			if (LocalPlayer && HitPoint != FVector::ZeroVector)
+			{
+				AUnit* unit = Cast<AUnit>(this->GetPawn());
+				if (unit)
+				{
+					FVector pos = unit->GetActorLocation();
+					HitPoint.Z = pos.Z;
+					FHeroAction action;
+					action.ActionStatus = EHeroActionStatus::MoveToPosition;
+					action.TargetVec1 = HitPoint;
+					unit->OverideAction(action);
+					//UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitPoint);
+				}
+			}
 		}
 
-		// 只trace 地板的actor
-		// 地板名可以自定義
-		FVector HitPoint = FVector::ZeroVector;
-		if (Hits.Num() > 0)
-		{
-			for (FHitResult Hit : Hits)
-			{
-				if (Hit.Actor.IsValid() && Hit.Actor->GetFName().GetPlainNameString() == "Floor")
-				{
-					HitPoint = Hit.ImpactPoint;
-				}
-				// all landscape can click
-				if (Hit.Actor.IsValid())
-				{
-					FString ResStr;
-					Hit.Actor->GetClass()->GetName(ResStr);
-					if (ResStr == "Landscape")
-					{
-						HitPoint = Hit.ImpactPoint;
-					}
-				}
-			}
-		}
-		ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
-		if (LocalPlayer && HitPoint != FVector::ZeroVector)
-		{
-			AUnit* unit = Cast<AUnit>(this->GetPawn());
-			if (unit)
-			{
-				FVector pos = unit->GetActorLocation();
-				HitPoint.Z = pos.Z;
-				FHeroAction action;
-				action.ActionStatus = EHeroActionStatus::MoveToPosition;
-				action.TargetVec1 = HitPoint;
-				unit->OverideAction(action);
-			}
-		}
+		
+		
 	}
+}
+
+void AHeroController::ServerAttackCompute_Implementation(AUnit* attacker, AUnit* victim, EDamageType dtype, float damage, bool AttackLanded)
+{
+	victim->HP -= damage;
+}
+
+bool AHeroController::ServerAttackCompute_Validate(AUnit* attacker, AUnit* victim, EDamageType dtype, float damage, bool AttackLanded)
+{
+	return true;
 }
 
 void AHeroController::ServerCharacterMove_Implementation(class AUnit* hero, const FVector& pos)

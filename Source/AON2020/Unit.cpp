@@ -4,6 +4,7 @@
 #include "AON2020.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "HeroController.h"
 
 
 // Sets default values
@@ -11,6 +12,9 @@ AUnit::AUnit()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	AbilitySystem = CreateDefaultSubobject<UAONAbilitySystemComponent>(TEXT("AbilitySystem"));
+	AbilitySystem->SetIsReplicated(true);
+	AbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 }
 
 // Called when the game starts or when spawned
@@ -25,6 +29,17 @@ void AUnit::BeginPlay()
 void AUnit::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	ActionLoop();
+	AttackingCounting += DeltaTime;
+	FollowActorUpdateCounting += DeltaTime;
+	CurrentAttackSpeedSecond = BaseAttackSpeedSecond / (1 + CurrentAttackSpeed);
+// 	FVector dir = GetVelocity();
+// 	dir.Z = 0;
+// 	this->SetActorRotation(dir.Rotation());
+}
+
+void AUnit::ActionLoop()
+{
 	// 是否有動作？
 	if (ActionQueue.Num() > 0 && IsAlive && EHeroBodyStatus::Stunning != BodyStatus)
 	{
@@ -74,6 +89,16 @@ void AUnit::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
+void AUnit::Montage_Play_Implementation(UAnimMontage* MontageToPlay, float InPlayRate /*= 1.f*/)
+{
+	GetMesh()->GetAnimInstance()->Montage_Play(MontageToPlay);
+}
+
+bool AUnit::Montage_Play_Validate(UAnimMontage* MontageToPlay, float InPlayRate /*= 1.f*/)
+{
+	return true;
+}
+
 void AUnit::DoAction(const FHeroAction& CurrentAction)
 {
 	switch (CurrentAction.ActionStatus)
@@ -83,6 +108,9 @@ void AUnit::DoAction(const FHeroAction& CurrentAction)
 		break;
 	case EHeroActionStatus::MoveToPosition:
 		DoAction_MoveToPosition(CurrentAction);
+		break;
+	case EHeroActionStatus::AttackActor:
+		DoAction_AttackActor(CurrentAction);
 		break;
 	default:
 		break;
@@ -150,6 +178,109 @@ void AUnit::PopAction()
 	}
 }
 
+void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
+{
+	AUnit* TargetActor = CurrentAction.TargetActor;
+	FVector dir = TargetActor->GetActorLocation() - GetActorLocation();
+	dir.Z = 0;
+	dir.Normalize();
+	SetActorRotation(dir.Rotation());
+	switch (BodyStatus)
+	{
+	case EHeroBodyStatus::Standing:
+	{
+		float DistanceToTargetActor = FVector::Dist(TargetActor->GetActorLocation(), this->GetActorLocation());
+		if (CurrentAttackRange + TargetActor->BodySize > DistanceToTargetActor)
+		{
+			BodyStatus = EHeroBodyStatus::AttackWating;
+			IsAttacked = false;
+		}
+		else
+		{
+			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), TargetActor->GetActorLocation());
+			BodyStatus = EHeroBodyStatus::Moving;
+		}
+	}
+	break;
+	case EHeroBodyStatus::Moving:
+	{
+		float DistanceToTargetActor = FVector::Dist(TargetActor->GetActorLocation(), this->GetActorLocation());
+		if (CurrentAttackRange + TargetActor->BodySize > DistanceToTargetActor)
+		{
+			BodyStatus = EHeroBodyStatus::AttackWating;
+			IsAttacked = false;
+			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), this->GetActorLocation());
+		}
+		else if (FollowActorUpdateCounting > FollowActorUpdateTimeGap)
+		{
+			FollowActorUpdateCounting = 0;
+			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), TargetActor->GetActorLocation());
+		}
+	}
+	break;
+	case EHeroBodyStatus::Stunning:
+		break;
+	case EHeroBodyStatus::AttackWating:
+	{
+		if (AttackingCounting > CurrentAttackSpeedSecond)
+		{
+			AttackingCounting = 0;
+			BodyStatus = EHeroBodyStatus::AttackBegining;
+			// 播放攻擊動畫
+			if (AttackMontages.Num() > 0)
+			{
+				Montage_Play(AttackMontages[0]);
+			}
+		}
+	}
+	break;
+	case EHeroBodyStatus::AttackBegining:
+	{
+		if (!IsAttacked && AttackingCounting > CurrentAttackingBeginingTimeLength)
+		{
+			AHeroController* controller = Cast<AHeroController>(GetController());
+			// 遠攻傷害
+// 			if (AttackBullet)
+// 			{
+// 				FVector pos = GetActorLocation();
+// 				ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(AttackBullet);
+// 				if (bullet)
+// 				{
+// 					bullet->SetActorLocation(pos);
+// 					bullet->SetTargetActor(this, TargetActor);
+// 					bullet->Damage = this->CurrentAttack;
+// 				}
+// 			}
+// 			else
+			{// 近戰傷害
+				if (controller)
+				{
+					controller->ServerAttackCompute(this, TargetActor, EDamageType::DAMAGE_PHYSICAL, CurrentAttack, true);
+				}
+			}
+			BodyStatus = EHeroBodyStatus::AttackEnding;
+		}
+	}
+	break;
+	case EHeroBodyStatus::AttackEnding:
+	{
+		if (AttackingCounting > CurrentAttackingBeginingTimeLength + CurrentAttackingEndingTimeLength)
+		{
+			BodyStatus = EHeroBodyStatus::Standing;
+		}
+	}
+	break;
+	case EHeroBodyStatus::SpellWating:
+	case EHeroBodyStatus::SpellBegining:
+	case EHeroBodyStatus::SpellEnding:
+
+	default:
+		BodyStatus = EHeroBodyStatus::Standing;
+		break;
+	}
+
+}
+
 void AUnit::DoAction_MoveToPosition(const FHeroAction& CurrentAction)
 {
 	switch (BodyStatus)
@@ -171,7 +302,6 @@ void AUnit::DoAction_MoveToPosition(const FHeroAction& CurrentAction)
 			(dis > 8000 && LastMoveTarget != CurrentAction.TargetVec1))
 		{
 			LastMoveTarget = CurrentAction.TargetVec1;
-			
 			if (dis < 8000)
 			{
 				FVector v = (HitPoint - pos);
@@ -252,8 +382,13 @@ void AUnit::OnRep_MaxMP()
 	OnMPChange(MP, MaxMP);
 }
 
+
 void AUnit::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AUnit, BodyStatus);
+	DOREPLIFETIME(AUnit, HP);
+	DOREPLIFETIME(AUnit, MaxHP);
+	DOREPLIFETIME(AUnit, MP);
+	DOREPLIFETIME(AUnit, MaxMP);
 }
