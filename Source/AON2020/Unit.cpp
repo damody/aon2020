@@ -99,6 +99,13 @@ bool AUnit::Montage_Play_Validate(UAnimMontage* MontageToPlay, float InPlayRate 
 	return true;
 }
 
+void AUnit::OverideAction2(FHeroAction action)
+{
+	action.SequenceNumber = Seq++;
+	ActionQueue.Empty();
+	ActionQueue.Add(action);
+}
+
 void AUnit::DoAction(const FHeroAction& CurrentAction)
 {
 	switch (CurrentAction.ActionStatus)
@@ -197,7 +204,6 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 		}
 		else
 		{
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), TargetActor->GetActorLocation());
 			BodyStatus = EHeroBodyStatus::Moving;
 		}
 	}
@@ -209,12 +215,16 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 		{
 			BodyStatus = EHeroBodyStatus::AttackWating;
 			IsAttacked = false;
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), this->GetActorLocation());
 		}
-		else if (FollowActorUpdateCounting > FollowActorUpdateTimeGap)
+		else
 		{
 			FollowActorUpdateCounting = 0;
-			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), TargetActor->GetActorLocation());
+			FVector pos = GetActorLocation();
+			FVector v = (TargetActor->GetActorLocation() - pos);
+			v.Z = 0;
+			v.Normalize();
+			this->SetActorRotation(v.Rotation());
+			this->AddMovementInput(v);
 		}
 	}
 	break;
@@ -239,23 +249,26 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 		if (!IsAttacked && AttackingCounting > CurrentAttackingBeginingTimeLength)
 		{
 			AHeroController* controller = Cast<AHeroController>(GetController());
-			// 遠攻傷害
-// 			if (AttackBullet)
-// 			{
-// 				FVector pos = GetActorLocation();
-// 				ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(AttackBullet);
-// 				if (bullet)
+			if (GetWorld()->GetNetMode() == NM_DedicatedServer)
+			{
+				// 遠攻傷害
+// 				if (AttackBullet)
 // 				{
-// 					bullet->SetActorLocation(pos);
-// 					bullet->SetTargetActor(this, TargetActor);
-// 					bullet->Damage = this->CurrentAttack;
+// 					FVector pos = GetActorLocation();
+// 					ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(AttackBullet);
+// 					if (bullet)
+// 					{
+// 						bullet->SetActorLocation(pos);
+// 						bullet->SetTargetActor(this, TargetActor);
+// 						bullet->Damage = this->CurrentAttack;
+// 					}
 // 				}
-// 			}
-// 			else
-			{// 近戰傷害
-				if (controller)
-				{
-					controller->ServerAttackCompute(this, TargetActor, EDamageType::DAMAGE_PHYSICAL, CurrentAttack, true);
+// 				else
+				{// 近戰傷害
+					if (controller)
+					{
+						controller->ServerAttackCompute(this, TargetActor, EDamageType::DAMAGE_PHYSICAL, CurrentAttack, true);
+					}
 				}
 			}
 			BodyStatus = EHeroBodyStatus::AttackEnding;
@@ -298,24 +311,19 @@ void AUnit::DoAction_MoveToPosition(const FHeroAction& CurrentAction)
 		FVector HitPoint = CurrentAction.TargetVec1;
 		FVector pos = GetActorLocation();
 		float dis = FVector::DistSquared(pos, HitPoint);
-		if ((dis <= 8000 && (LastMoveTarget == CurrentAction.TargetVec1 || LastMoveTarget == FVector::ZeroVector)) ||
-			(dis > 8000 && LastMoveTarget != CurrentAction.TargetVec1))
+		if (dis < 8000)
 		{
-			LastMoveTarget = CurrentAction.TargetVec1;
-			if (dis < 8000)
-			{
-				FVector v = (HitPoint - pos);
-				v.Normalize();
-				HitPoint = HitPoint + v * 40;
-				LastMoveTarget = HitPoint;
-				float dis2 = FVector::DistSquared(pos, HitPoint);
-				UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), HitPoint);
-			}
-			else
-			{
-				UAIBlueprintHelperLibrary::SimpleMoveToLocation(this->GetController(), HitPoint);
-			}
+			FVector v = (HitPoint - pos);
+			v.Z = 0;
+			v.Normalize();
+			HitPoint = HitPoint + v * 40;
 		}
+
+		FVector v = (HitPoint - pos);
+		v.Z = 0;
+		v.Normalize();
+		this->SetActorRotation(v.Rotation());
+		this->AddMovementInput(v);
 	}
 	break;
 	}
@@ -391,4 +399,5 @@ void AUnit::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetime
 	DOREPLIFETIME(AUnit, MaxHP);
 	DOREPLIFETIME(AUnit, MP);
 	DOREPLIFETIME(AUnit, MaxMP);
+	//DOREPLIFETIME(AUnit, ActionQueue);
 }

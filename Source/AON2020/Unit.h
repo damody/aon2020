@@ -54,7 +54,10 @@ public:
 
 	UFUNCTION(Server, WithValidation, Reliable)
 	void OverideAction(FHeroAction action);
-
+	
+	
+	void OverideAction2(FHeroAction action);
+	
 	UFUNCTION(NetMulticast, WithValidation, Reliable)
 	void Montage_Play(UAnimMontage* MontageToPlay, float InPlayRate = 1.f);
 	

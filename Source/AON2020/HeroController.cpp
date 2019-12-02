@@ -90,6 +90,7 @@ void AHeroController::OnMouseRDown()
 					action.ActionStatus = EHeroActionStatus::AttackActor;
 					action.TargetActor = TargetUnit;
 					unit->OverideAction(action);
+					unit->OverideAction2(action);
 					return;
 				}
 			}
@@ -152,7 +153,7 @@ void AHeroController::OnMouseRDown()
 					action.ActionStatus = EHeroActionStatus::MoveToPosition;
 					action.TargetVec1 = HitPoint;
 					unit->OverideAction(action);
-					//UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitPoint);
+					unit->OverideAction2(action);
 				}
 			}
 		}

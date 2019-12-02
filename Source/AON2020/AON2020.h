@@ -5,3 +5,5 @@
 #include "CoreMinimal.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAON2020, Log, All);
+
+FString GetNetString(AActor* actor);
