@@ -239,7 +239,20 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 			// ¼½©ñ§ðÀ»°Êµe
 			if (AttackMontages.Num() > 0)
 			{
-				Montage_Play(AttackMontages[0]);
+				if (AttackShowMethod == EShowMethod::SEQUENCE)
+				{
+					if (AttackIndex >= AttackMontages.Num())
+					{
+						AttackIndex = 0;
+					}
+					Montage_Play(AttackMontages[AttackIndex]);
+					AttackIndex++;
+				}
+				else
+				{
+					AttackIndex = FMath::Rand() % AttackMontages.Num();
+					Montage_Play(AttackMontages[AttackIndex]);
+				}
 			}
 		}
 	}

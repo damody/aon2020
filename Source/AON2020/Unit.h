@@ -174,10 +174,14 @@ public:
 	FHeroAction CurrentAction;
 	
 	UPROPERTY(EditAnywhere, meta = (DisplayName = "攻擊順序"), Category = "aon")
-	EShowMethod AttackShow;
+	EShowMethod AttackShowMethod;
 
 	UPROPERTY(EditAnywhere, meta = (DisplayName = "攻擊動作"), Category = "aon")
 	TArray<UAnimMontage*> AttackMontages;
+
+	// 給攻擊順序使用
+	UPROPERTY(EditAnywhere, meta = (DisplayName = "攻擊index"), Category = "aon")
+	int32 AttackIndex = 0;
 
 	UPROPERTY(EditAnywhere, meta = (DisplayName = "被打動作"), Category = "aon")
 	UAnimMontage* BeAttack;
