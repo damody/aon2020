@@ -316,6 +316,7 @@ void AUnit::DoAction_MoveToPosition(const FHeroAction& CurrentAction)
 	case EHeroBodyStatus::AttackEnding:
 	case EHeroBodyStatus::Standing:
 	{
+		this->StopAnimMontage();
 		BodyStatus = EHeroBodyStatus::Moving;
 	}
 	break;
