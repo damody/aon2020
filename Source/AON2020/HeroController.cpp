@@ -8,6 +8,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "IXRTrackingSystem.h"
 #include "Engine.h"
+#include <functional>
+#include "WebInterface.h"
 
 AHeroController::AHeroController()
 {
@@ -337,3 +339,28 @@ bool AHeroController::InputKey(FKey Key, EInputEvent EventType, float AmountDepr
 
 	return bResult;
 }
+
+void AHeroController::SetWebUICallback(UWebInterface* wi)
+{
+	using namespace std::placeholders;
+	wi->SetMouseDownCallback(std::bind(&AHeroController::MouseDownCallback, this, _1));
+	wi->SetMouseUpCallback(std::bind(&AHeroController::MouseUpCallback, this, _1));
+	wi->SetMouseWheelCallback(std::bind(&AHeroController::MouseWheelCallback, this, _1));
+}
+
+void AHeroController::MouseDownCallback(FKey key)
+{
+	InputKey(key, EInputEvent::IE_Pressed, 0, false);
+}
+
+void AHeroController::MouseUpCallback(FKey key)
+{
+	InputKey(key, EInputEvent::IE_Released, 0, false);
+}
+
+void AHeroController::MouseWheelCallback(FKey key)
+{
+	InputKey(key, EInputEvent::IE_Pressed, 0, false);
+	InputKey(key, EInputEvent::IE_Released, 0, false);
+}
+

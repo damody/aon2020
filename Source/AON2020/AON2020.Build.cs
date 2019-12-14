@@ -10,6 +10,6 @@ public class AON2020 : ModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks",
             "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "NavigationSystem", "AIModule", "UMG",
-            "Paper2D",});
+            "Paper2D", "WebUI"});
     }
 }

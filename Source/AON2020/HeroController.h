@@ -56,4 +56,11 @@ public:
 	UFUNCTION(Server, WithValidation, Reliable, BlueprintCallable, Category = "MOBA")
 	void ServerAttackCompute(AUnit* attacker, AUnit* victim, EDamageType dtype,
 		float damage, bool AttackLanded);
+
+	UFUNCTION(BlueprintCallable)
+	void SetWebUICallback(UWebInterface* wi);
+
+	void MouseDownCallback(FKey key);
+	void MouseUpCallback(FKey key);
+	void MouseWheelCallback(FKey key);
 };
