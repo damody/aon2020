@@ -58,7 +58,7 @@ public:
 	void UpdateLength();
 
 	void UpdatePos(FVector PlayerPos, FVector MousePos);
-
+	
 	UPROPERTY(Category = "SkillHint", EditAnywhere, BlueprintReadOnly)
 	EAbilityHint SkillType = EAbilityHint::NoneHint;
 

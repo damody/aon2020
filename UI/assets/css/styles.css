@@ -1,0 +1,89 @@
+body {
+  background-color:transparent;
+}
+
+#status {
+  position:absolute;
+  top:70%;
+  width:40%;
+}
+
+#status .row {
+  height:20px;
+}
+
+#skillc {
+  position:absolute;
+  top:85%;
+  right:40%;
+  width:50%;
+  height:64px;
+}
+
+#buffc {
+  position:absolute;
+  top:75%;
+  right:0px;
+  width:50%;
+  height:64px;
+}
+
+.skillimg {
+  width:50px;
+  height:50px;
+  border-radius:25px 25px 25px 25px;
+}
+
+.skillupimg {
+  width:50px;
+  height:15px;
+}
+
+.buffimg {
+  width:40px;
+  height:40px;
+}
+
+img[src=""] {
+  opacity:0;
+}
+
+.pie {
+  position:absolute;
+  overflow:hidden;
+  /*border-radius:25px 25px 25px 25px;*/
+  -webkit-animation:a 5s infinite linear;
+}
+
+.pie:before, .pie:after {
+  content:"";
+  box-sizing:border-box;
+  position:absolute;
+  top:0;
+  right:0;
+  width:50px;
+  height:25px;
+  background:#0033ba;
+  border-style:solid;
+  border-color:rgba(255,15,0,0.75);
+  border-width:1px 1px 0;
+  border-radius:50px 50px 0 0;
+  transform-origin:25px 25px;
+}
+
+.pie:before {
+  z-index:1;
+  -webkit-animation:a1 5s infinite linear;
+  transform:rotate(-90deg);
+}
+
+.pie:after {
+  opacity:0;
+  z-index:2;
+  transform:rotate(90deg);
+  -webkit-animation:a2 5s infinite linear;
+}
+
+img {
+}
+

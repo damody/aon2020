@@ -21,6 +21,10 @@ enum class EShowMethod : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChangeDelegate, float, HP, float, MaxHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMPChangeDelegate, float, MP, float, MaxMP);
 
+class UWebInterfaceJsonValue;
+class UWebInterfaceJsonObject;
+class UParticleSystemComponent;
+
 UCLASS()
 class AON2020_API AUnit : public ACharacter, public IAbilitySystemInterface
 {
@@ -76,6 +80,9 @@ public:
 	//推出做完的動作
 	void PopAction();
 
+	//產生動作
+	UWebInterfaceJsonObject* BuildJsonObject();
+
 	UFUNCTION()
 	void OnHPChange(float HP, float MaxHP);
 	UFUNCTION()
@@ -89,6 +96,14 @@ public:
 	
 	UPROPERTY(BlueprintReadOnly)
 	class UAONAbilitySystemComponent* AbilitySystem;
+
+	//英雄名/單位名
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
+	FString UnitName;
+
+	//隊伍id
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
+	int32 TeamId;
 
 	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "血量"), ReplicatedUsing = OnRep_HP)
 	int16 HP = 1000;

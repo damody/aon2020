@@ -19,11 +19,19 @@ AHeroController::AHeroController()
 FVector2D AHeroController::GetMouseScreenPosition()
 {
 	// change to UWidgetLayoutLibrary::GetMousePositionOnViewport ®³¨ìviewportªº®y¼Ð
-// 	FVector2D mouseposofview = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetWorld());
-// 	float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(GetWorld());
-// 	mouseposofview.X *= ViewportScale;
-// 	mouseposofview.Y *= ViewportScale;
-// 	return mouseposofview;
+	UWidgetLayoutLibrary *myWidget = Cast<UWidgetLayoutLibrary>(UGameplayStatics::GetGameInstance(GetWorld()));
+
+	FVector2D mouseposofview = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetWorld());
+	float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(GetWorld());
+	mouseposofview.X *= ViewportScale;
+	mouseposofview.Y *= ViewportScale;
+	if (mouseposofview != FVector2D::ZeroVector)
+	{
+		CurrentMouseXY = mouseposofview;
+		return mouseposofview;
+	}
+		
+	
 	ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player);
 	if (LocalPlayer && LocalPlayer->ViewportClient)
 	{
@@ -351,6 +359,14 @@ void AHeroController::SetWebUICallback(UWebInterface* wi)
 void AHeroController::MouseDownCallback(FKey key)
 {
 	InputKey(key, EInputEvent::IE_Pressed, 0, false);
+	if (key == EKeys::LeftMouseButton)
+	{
+		OnMouseLDown();
+	}
+	else if (key == EKeys::RightMouseButton)
+	{
+		OnMouseRDown();
+	}
 }
 
 void AHeroController::MouseUpCallback(FKey key)

@@ -223,4 +223,3 @@ void AAbilityHint::UpdatePos(FVector PlayerPos, FVector MousePos)
 	}
 	UpdateLength();
 }
-
