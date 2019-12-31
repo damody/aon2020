@@ -17,14 +17,16 @@ AUnit::AUnit()
 	AbilitySystem = CreateDefaultSubobject<UAONAbilitySystemComponent>(TEXT("AbilitySystem"));
 	AbilitySystem->SetIsReplicated(true);
 	AbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+	AttributeSet = CreateDefaultSubobject<UAONAttributeSet>(TEXT("AttributeSet"));
+	AttributeSet->Owner = this;
 }
 
 // Called when the game starts or when spawned
 void AUnit::BeginPlay()
 {
 	Super::BeginPlay();
-	OnHPChange(HP, MaxHP);
-	OnMPChange(MP, MaxMP);
+	OnHPChange(AttributeSet->HP, AttributeSet->MaxHP);
+	OnMPChange(AttributeSet->MP, AttributeSet->MaxMP);
 }
 
 // Called every frame
@@ -34,7 +36,7 @@ void AUnit::Tick(float DeltaTime)
 	ActionLoop();
 	AttackingCounting += DeltaTime;
 	FollowActorUpdateCounting += DeltaTime;
-	CurrentAttackSpeedSecond = BaseAttackSpeedSecond / (1 + CurrentAttackSpeed);
+	CurrentAttackSpeedSecond = BaseAttackSpeedSecond / (AttributeSet->AttackSpeed * 0.01);
 // 	FVector dir = GetVelocity();
 // 	dir.Z = 0;
 // 	this->SetActorRotation(dir.Rotation());
@@ -199,7 +201,7 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 	case EHeroBodyStatus::Standing:
 	{
 		float DistanceToTargetActor = FVector::Dist(TargetActor->GetActorLocation(), this->GetActorLocation());
-		if (CurrentAttackRange + TargetActor->BodySize > DistanceToTargetActor)
+		if (AttributeSet->AttackRange + TargetActor->BodySize > DistanceToTargetActor)
 		{
 			BodyStatus = EHeroBodyStatus::AttackWating;
 			IsAttacked = false;
@@ -213,7 +215,7 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 	case EHeroBodyStatus::Moving:
 	{
 		float DistanceToTargetActor = FVector::Dist(TargetActor->GetActorLocation(), this->GetActorLocation());
-		if (CurrentAttackRange + TargetActor->BodySize > DistanceToTargetActor)
+		if (AttributeSet->AttackRange + TargetActor->BodySize > DistanceToTargetActor)
 		{
 			BodyStatus = EHeroBodyStatus::AttackWating;
 			IsAttacked = false;
@@ -282,7 +284,7 @@ void AUnit::DoAction_AttackActor(const FHeroAction& CurrentAction)
 				{// 近戰傷害
 					if (controller)
 					{
-						controller->ServerAttackCompute(this, TargetActor, EDamageType::DAMAGE_PHYSICAL, CurrentAttack, true);
+						controller->ServerAttackCompute(this, TargetActor, EDamageType::DAMAGE_PHYSICAL, AttributeSet->Attack, true);
 					}
 				}
 			}
@@ -376,15 +378,15 @@ UWebInterfaceJsonObject* AUnit::BuildJsonObject()
 	//英雄名/單位名
 	wjo->SetString(FString(TEXT("UnitName")), UnitName);
 	//隊伍id
-	wjo->SetInteger(FString(TEXT("TeamId")), TeamId);
+	wjo->SetInteger(FString(TEXT("TeamId")), AttributeSet->TeamId);
 	//是否活著
 	wjo->SetBoolean(FString(TEXT("IsAlive")), IsAlive);
 	//移動速度
 	wjo->SetInteger(FString(TEXT("CurrentMoveSpeed")), 0);
 	//最大血量
-	wjo->SetInteger(FString(TEXT("CurrentMaxHP")), MaxHP);
+	wjo->SetInteger(FString(TEXT("CurrentMaxHP")), AttributeSet->MaxHP);
 	//血量
-	wjo->SetInteger(FString(TEXT("CurrentHP")), HP);
+	wjo->SetInteger(FString(TEXT("CurrentHP")), AttributeSet->HP);
 	//通用護盾值
 	wjo->SetInteger(FString(TEXT("CurrentShield")), 0);
 	//物理護盾值
@@ -392,23 +394,23 @@ UWebInterfaceJsonObject* AUnit::BuildJsonObject()
 	//魔法護盾值
 	wjo->SetInteger(FString(TEXT("CurrentShieldMagical")), 0);
 	//最大魔力
-	wjo->SetInteger(FString(TEXT("CurrentMaxMP")), MaxMP);
+	wjo->SetInteger(FString(TEXT("CurrentMaxMP")), AttributeSet->MaxMP);
 	//魔力
-	wjo->SetInteger(FString(TEXT("CurrentMP")), MP);
+	wjo->SetInteger(FString(TEXT("CurrentMP")), AttributeSet->MP);
 	//每秒回血
 	wjo->SetNumber(FString(TEXT("CurrentRegenHP")), 0);
 	//每秒回魔
 	wjo->SetNumber(FString(TEXT("CurrentRegenMP")), 0);
 	//攻速
-	wjo->SetNumber(FString(TEXT("CurrentAttackSpeed")), CurrentAttackSpeed);
+	wjo->SetNumber(FString(TEXT("CurrentAttackSpeed")), AttributeSet->AttackSpeed);
 	//攻速秒數
 	wjo->SetNumber(FString(TEXT("CurrentAttackSpeedSecond")), CurrentAttackSpeedSecond);
 	//攻擊力
-	wjo->SetInteger(FString(TEXT("CurrentAttack")), CurrentAttack);
+	wjo->SetInteger(FString(TEXT("CurrentAttack")), AttributeSet->Attack);
 	//防禦力
 	wjo->SetNumber(FString(TEXT("CurrentArmor")), 0);
 	//攻擊距離
-	wjo->SetInteger(FString(TEXT("CurrentAttackRange")), CurrentAttackRange);
+	wjo->SetInteger(FString(TEXT("CurrentAttackRange")), AttributeSet->AttackRange);
 	//當前魔法受傷倍率
 	wjo->SetNumber(FString(TEXT("CurrentMagicInjured")), 0);
 	//準備要用的技能index
@@ -493,7 +495,6 @@ UWebInterfaceJsonObject* AUnit::BuildJsonObject()
 	return wjo;
 }
 
-
 void AUnit::OnHPChange(float HP, float MaxHP)
 {
 	BP_OnHPChange(HP, MaxHP);
@@ -504,41 +505,9 @@ void AUnit::OnMPChange(float MP, float MaxMP)
 	BP_OnMPChange(MP, MaxMP);
 }
 
-void AUnit::OnRep_HP()
-{
-	HP = FMath::Clamp(HP, (int16)0, MaxHP);
-	OnHPChangeDelegate.Broadcast(HP, MaxHP);
-	OnHPChange(HP, MaxHP);
-}
-
-void AUnit::OnRep_MaxHP()
-{
-	HP = FMath::Clamp(HP, (int16)0, MaxHP);
-	OnHPChangeDelegate.Broadcast(HP, MaxHP);
-	OnHPChange(HP, MaxHP);
-}
-
-void AUnit::OnRep_MP()
-{
-	MP = FMath::Clamp(MP, (int16)0, MaxMP);
-	OnMPChangeDelegate.Broadcast(MP, MaxMP);
-	OnMPChange(MP, MaxMP);
-}
-
-void AUnit::OnRep_MaxMP()
-{
-	MP = FMath::Clamp(MP, (int16)0, MaxMP);
-	OnMPChangeDelegate.Broadcast(MP, MaxMP);
-	OnMPChange(MP, MaxMP);
-}
-
 void AUnit::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AUnit, BodyStatus);
-	DOREPLIFETIME(AUnit, HP);
-	DOREPLIFETIME(AUnit, MaxHP);
-	DOREPLIFETIME(AUnit, MP);
-	DOREPLIFETIME(AUnit, MaxMP);
-	//DOREPLIFETIME(AUnit, ActionQueue);
+	DOREPLIFETIME(AUnit, IsAlive);
 }

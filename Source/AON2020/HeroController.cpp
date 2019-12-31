@@ -175,7 +175,7 @@ void AHeroController::OnMouseRDown()
 
 void AHeroController::ServerAttackCompute_Implementation(AUnit* attacker, AUnit* victim, EDamageType dtype, float damage, bool AttackLanded)
 {
-	victim->HP -= damage;
+	victim->AttributeSet->HP -= damage;
 }
 
 bool AHeroController::ServerAttackCompute_Validate(AUnit* attacker, AUnit* victim, EDamageType dtype, float damage, bool AttackLanded)

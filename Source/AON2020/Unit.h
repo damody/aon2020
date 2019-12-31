@@ -18,8 +18,15 @@ enum class EShowMethod : uint8
 	SHOW_END UMETA(Hidden, DisplayName = ""),
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHPChangeDelegate, float, HP, float, MaxHP);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMPChangeDelegate, float, MP, float, MaxMP);
+UENUM(BlueprintType)
+enum class ESyncLevel : uint8
+{
+	LEVEL1 UMETA(DisplayName = "可以被加buff，有被動buff"),
+	LEVEL2 UMETA(DisplayName = "有觸發事件"),
+	LEVEL3 UMETA(DisplayName = "有技能"),
+	LEVEL_END UMETA(Hidden, DisplayName = ""),
+};
+
 
 class UWebInterfaceJsonValue;
 class UWebInterfaceJsonObject;
@@ -39,6 +46,10 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
+
+	UPROPERTY()
+	class UAONAttributeSet* AttributeSet;
+
 	UAONAbilitySystemComponent* GetAbilitySystemComponent() const override
 	{
 		return AbilitySystem;
@@ -101,32 +112,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	FString UnitName;
 
-	//隊伍id
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
-	int32 TeamId;
-
-	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "血量"), ReplicatedUsing = OnRep_HP)
-	int16 HP = 1000;
-
-	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "最大血量"), ReplicatedUsing = OnRep_MaxHP)
-	int16 MaxHP = 1000;
-
-	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "魔力"), ReplicatedUsing = OnRep_MP)
-	int16 MP = 1000;
-	
-	UPROPERTY(EditAnywhere, Category = "aon", meta = (DisplayName = "最大魔力"), ReplicatedUsing = OnRep_MaxMP)
-	int16 MaxMP = 1000;
-
-	//攻擊距離
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
-	float CurrentAttackRange;
+	ESyncLevel SyncLevel;
 
 	//身體半徑，讓巨大的單位不需要很長的攻擊距離才能攻擊到
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float BodySize = 100;
 
+	//當前狀態
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
+	TMap<EHeroBuffState, bool> BuffStateMap;
+
+	//預設狀態
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
+	TMap<EHeroBuffState, bool> DefaultBuffState;
+
+	//當前加成 可能可以用TArray替代
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
+	TMap<EHeroBuffProperty, int32> BuffPropertyMap;
+	
+	//預設加成
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MOBA|Current")
+	TMap<EHeroBuffProperty, int32> DefaultBuffProperty;
+
+	//攻速秒數
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon", Replicated)
+	float CurrentAttackSpeedSecond;
+
 	//攻擊計時器
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
 	float AttackingCounting = 0;
 
 	/*
@@ -145,40 +159,31 @@ public:
 							    Cause Damage
 	*/
 	//攻擊動畫時間長度
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float CurrentAttackingAnimationTimeLength = 0.5;
 	//攻擊動畫播放速度
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float CurrentAttackingAnimationRate = 1;
 	//攻擊前搖時間長度
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float CurrentAttackingBeginingTimeLength = 0.3;
 	//攻擊後搖時間長度
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float CurrentAttackingEndingTimeLength = 0.2;
 	//當前普攻是否打出來了
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
 	bool IsAttacked = false;
 
-	//攻速
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
-	float CurrentAttackSpeed = 0;
-	//攻速秒數
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current", Replicated)
-	float CurrentAttackSpeedSecond;
-	//攻擊力
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Current")
-	float CurrentAttack;
 	//基礎攻速
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
 	float BaseAttackSpeedSecond = 1.8;
 
-
+	
 	//追踨目標計時器
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Counting")
 	float FollowActorUpdateCounting = 0;
 	//追踨目標更新時間
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "aon|Counting")
 	float FollowActorUpdateTimeGap = 0.3;
 
 	//依序做完裡面的動作
@@ -216,21 +221,7 @@ public:
 
 	uint16 Seq = 0;
 
-	FOnHPChangeDelegate OnHPChangeDelegate;
-	FOnMPChangeDelegate OnMPChangeDelegate;
-
-protected:
-	UFUNCTION()
-	void OnRep_HP();
-
-	UFUNCTION()
-	void OnRep_MP();
-
-	UFUNCTION()
-	void OnRep_MaxHP();
 	
-	UFUNCTION()
-	void OnRep_MaxMP();
 
 private:
 	void DoAction_AttackActor(const FHeroAction& CurrentAction);
